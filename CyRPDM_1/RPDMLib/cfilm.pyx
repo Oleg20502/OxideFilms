@@ -1,6 +1,9 @@
 # distutils: language = c++
 # cython: language_level=3
 
+from libcpp.vector cimport vector
+cimport numpy as cnp
+import numpy as np
 from cfilm cimport CppFilm
 
 cdef class Film:
@@ -12,32 +15,32 @@ cdef class Film:
     def __dealloc__(self):
         del self.thisptr
 
-    def start(self):
+    def init(self):
         return self.thisptr.init()
 
     def solve(self):
         return self.thisptr.solve()
     
     def save_x(self, res_path, dig = 10):
-        self.thisptr.save_x(res_path, dig)
+        self.thisptr.save_x(res_path.encode(), dig)
 
     def save_t(self, res_path, dig = 10):
-        self.thisptr.save_t(res_path, dig)
+        self.thisptr.save_t(res_path.encode(), dig)
     
     def save_C_MV(self, res_path, dig = 10):
-        self.thisptr.save_C_MV(res_path, dig)
+        self.thisptr.save_C_MV(res_path.encode(), dig)
 
     def save_C_OV(self, res_path, dig = 10):
-        self.thisptr.save_C_OV(res_path, dig)
+        self.thisptr.save_C_OV(res_path.encode(), dig)
     
     def save_phi(self, res_path, dig = 10):
-        self.thisptr.save_phi(res_path, dig)
+        self.thisptr.save_phi(res_path.encode(), dig)
 
     def save_E(self, res_path, dig = 10):
-        self.thisptr.save_E(res_path, dig)
+        self.thisptr.save_E(res_path.encode(), dig)
     
     def save_k2(self, res_path, dig = 10):
-        self.thisptr.save_k2(res_path, dig)
+        self.thisptr.save_k2(res_path.encode(), dig)
     
 
     @property
@@ -185,12 +188,21 @@ cdef class Film:
     
 
     @property
-    def an(self):
-        return self.thisptr.get_an()
+    def an1(self):
+        return self.thisptr.get_an1()
     
-    @an.setter
-    def an(self, a):
-        self.thisptr.set_an(a)
+    @an1.setter
+    def an1(self, a):
+        self.thisptr.set_an1(a)
+
+
+    @property
+    def an2(self):
+        return self.thisptr.get_an2()
+    
+    @an2.setter
+    def an2(self, a):
+        self.thisptr.set_an2(a)
     
 
     @property
@@ -300,6 +312,15 @@ cdef class Film:
     def A_L(self, a):
         self.thisptr.set_A_L(a)
 
+
+    @property
+    def A_phi(self):
+        return self.thisptr.get_A_phi()
+
+    @A_phi.setter
+    def A_phi(self, a):
+        self.thisptr.set_A_phi(a)
+
     
     @property
     def A_C(self):
@@ -308,10 +329,27 @@ cdef class Film:
     @property
     def A_t(self):
         return self.thisptr.get_A_t()
+
     
     @property
-    def A_phi(self):
-        return self.thisptr.get_A_phi()
+    def C_MV(self):
+        cdef int Nx = self.thisptr.get_Nx()
+        return np.asarray(<cnp.float_t[:Nx]> self.thisptr.get_C_MV().data())
+    
+    @C_MV.setter
+    def C_MV(self, a):
+        Nx = a.size()
+        if Nx != self.Nx:
+            print(f'WARNING: Size {Nx} of a is not equal to size {self.Nx} of the class')
+        cdef vector[double] arr
+        cdef int i
+        for i in range(Nx):
+            arr.push_back(a[i])
+        self.thisptr.set_C_MV(arr)
+
+
+    
+    
         
     
     

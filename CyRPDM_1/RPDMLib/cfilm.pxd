@@ -1,5 +1,6 @@
 
 from libcpp.string cimport string
+from libcpp.vector cimport vector
 
 cdef extern from "film.hpp":
     cdef cppclass CppFilm "Film":
@@ -63,8 +64,11 @@ cdef extern from "film.hpp":
         double get_k5_0()
         void set_k5_0(double a)
 
-        double get_an()
-        void set_an(double a)
+        double get_an1()
+        void set_an1(double a)
+
+        double get_an2()
+        void set_an2(double a)
 
         double get_e_f()
         void set_e_f(double a)
@@ -102,9 +106,16 @@ cdef extern from "film.hpp":
         double get_A_L()
         void set_A_L(double a)
 
+        double get_A_phi()
+        void set_A_phi(double a)
+
         double get_A_C()
 
         double get_A_t()
 
-        double get_A_phi()
+        vector[double] get_C_MV()
+        void set_C_MV(vector[double] a)
+
+        vector[double] get_C_OV()
+        void set_C_OV(vector[double] a)
 

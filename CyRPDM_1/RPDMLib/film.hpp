@@ -39,7 +39,8 @@ class Film
         double k4_0;
         double k5_0;
 
-        double an;
+        double an1;
+        double an2;
         double e_f;
         double e_dl;
         double e_cdl;
@@ -58,6 +59,7 @@ class Film
         double A_t;
         double A_phi;
 
+        double A0;
         double A1;
         double A2;
         double A3;
@@ -104,51 +106,35 @@ class Film
 
         int init()
         {
-            std::cout << "1.1\n";
-            if (check_init < 25) {
+            if (check_init < 27) {
                 std::cerr << "Error: Not all parameters were set.\n";
                 return check_init;
             }
-            std::cout << "1.2\n";
             A_C = A_k * A_L / A_D;
             A_t = pow(A_L, 2) / A_D;
-            A_phi = R * Temp / Ff;
 
             h = L / (Nx-1);
             Nt = ceil(2 * (D_MV + D_OV) * T / pow(h, 2)) + 1;
             dt = T / (Nt-1);
             Ndata = (Nt - 1) / n_save + 2;
 
-            A1 = -pow(Ff, 2) /e_f/e_0/R/Temp*(A_k*pow(A_L, 3)/A_D)*2;
+            A0 = A_phi * Ff / (R * Temp);
+            A1 = -Ff/e_f/e_0*(A_k*pow(A_L, 3)/A_D)*2 / A_phi;
             A2 = -e_dl/e_f/d_dl;
             A3 = e_f*(d_dl/e_dl + d_cdl/e_cdl);
             A4 = dt*0.5/h;
             A_MV = D_MV * dt/ pow(h, 2);
             A_OV = D_OV * dt/ pow(h, 2);
 
-            std::cout << "1.3\n";
-            // C_MV = vector<double> (Nx, 0.0);
-            // C_OV = vector<double> (Nx, 0.0);
-            // C_MV_2 = vector<double> (Nx, 0.0);
-            // C_OV_2 = vector<double> (Nx, 0.0);
-            // C_V = vector<double> (Nx, 0.0);
             C_MV.resize(Nx);
             C_OV.resize(Nx);
             C_MV_2.resize(Nx);
             C_OV_2.resize(Nx);
             C_V.resize(Nx);
 
-            // phi = vector<double> (Nx, 0.0);
-            // E = vector<double> (Nx-1, 0.0);
             phi.resize(Nx);
             E.resize(Nx-1);
 
-            // A = vector<double> (Nx, 0.0);
-            // B = vector<double> (Nx, 0.0);
-            // C = vector<double> (Nx, 0.0);
-            // d = vector<double> (Nx, 0.0);
-            // Cm = vector<double> (Nx-1, 0.0);
-            // dm = vector<double> (Nx-1, 0.0);
             A.resize(Nx);
             B.resize(Nx);
             C.resize(Nx);
@@ -156,30 +142,18 @@ class Film
             Cm.resize(Nx-1);
             dm.resize(Nx-1);
 
-            std::cout << "1.4\n";
-            // x = vector<double> (Nx, 0.0);
             x.resize(Nx);
             for (int i = 0; i < Nx; ++i) {
                 x[i] = i * h;
             }
             
-            t = vector<double> (Nt, 0.0);
             t.resize(Nt);
             for (int i = 0; i < Nt; ++i) {
                 t[i] = i * dt;
             }
-            std::cout << "1.5\n";
-            std::cout << Nx << ' ' << Ndata << '\n';
-            // t_data = vector<double> (Ndata, 0.0);
+
             t_data.resize(Ndata);
-            std::cout << "1.5.1\n";
-            // Data_C_MV = vector<vector<double>> (Ndata, vector<double>(Nx, 0.0));
-            std::cout << "1.5.2\n";
-            // Data_C_OV = vector<vector<double>> (Ndata, vector<double>(Nx, 0.0));
-            std::cout << "1.5.3\n";
-            // Data_phi = vector<vector<double>> (Ndata, vector<double>(Nx, 0.0));
-            std::cout << "1.5.4\n";
-            // Data_E = vector<vector<double>> (Ndata, vector<double>(Nx - 1, 0.0));
+            Data_k2.resize(Ndata);
             Data_C_MV.resize(Ndata);
             Data_C_OV.resize(Ndata);
             Data_phi.resize(Ndata);
@@ -190,19 +164,16 @@ class Film
                 Data_phi[i].resize(Nx);
                 Data_E[i].resize(Nx-1);
             }
-            std::cout << "1.5.5\n";
-            // Data_k2 = vector<double> (Ndata, 0.0);
-            Data_k2.resize(Ndata);
-            std::cout << "1.6\n";
+
             /* C_MV_0 = vector<double> (Nx, 0.0);
             C_OV_0 = vector<double> (Nx, 0.0); */
             
             init_C(C_MV, C_OV, x, round(0.1 * L / h), round(0.1 * L / h), A_C);
-            std::cout << "1.7\n";
+            
             for (int i = 0; i < Nx; ++i) {
                 C_V[i] = C_OV[i] - C_MV[i];
             }
-            std::cout << "1.8\n";
+            
             B[0] = -1/h + A2;
             C[0] = 1/h;
             d[0] = A2*phi_ext;
@@ -217,7 +188,7 @@ class Film
             }
             Cm[0] = C[0]/B[0];
             dm[0] = d[0]/B[0];
-            std::cout << "1.9\n";
+
             std::cout << "Nx " << Nx << '\n';
             std::cout << "Nt " << Nt << '\n';
             std::cout << "Ndata " << Ndata << '\n';
@@ -227,7 +198,6 @@ class Film
 
         int solve()
         {         
-            std::cout << "2.1\n";
             for (int i = 1; i < Nx-1; ++i) {
                 Cm[i] = C[i]/(B[i] - A[i]*Cm[i-1]);
                 dm[i] = (d[i] - A[i]*dm[i-1])/(B[i] - A[i]*Cm[i-1]);
@@ -243,11 +213,11 @@ class Film
             double fx_L = phi[Nx-1] - phi[Nx-2];
             double phi_mf = phi_ext - phi[0];
             double phi_fs = phi[Nx-1];
-            double k1 = k1_0 * exp(an*phi_mf);
-            double k2 = k2_0 * exp(an*phi_mf);
-            double k3 = k3_0 * exp(an*phi_fs);
-            double k4 = k4_0 * exp(an*phi_fs);
-            std::cout << "2.2\n";
+            double k1 = k1_0 * exp(an1*A0*phi_mf);
+            double k2 = k2_0 * exp(an1*A0*phi_mf);
+            double k3 = k3_0 * exp(an2*A0*phi_fs);
+            double k4 = k4_0 * exp(an2*A0*phi_fs);
+
             for (int i = 0; i < Nx; ++i) {
                 Data_C_MV[0][i] = C_MV[i];
                 Data_C_OV[0][i] = C_OV[i];
@@ -262,18 +232,18 @@ class Film
             int I_data = 1;
             for (int i = 1; i < Nt; ++i) {
                 for (int j = 1; j < Nx-1; ++j) {
-                    fx = phi[j+1]-phi[j-1];
-                    C_MV_2[j] = C_MV[j] + A_MV*(C_MV[j+1] - 2*C_MV[j] + C_MV[j-1]) - 2*D_MV*A1*dt*C_V[j]*C_MV[j] - 0.5*A_MV*fx * (C_MV[j+1]-C_MV[j-1]);
-                    C_OV_2[j] = C_OV[j] + A_OV*(C_OV[j+1] - 2*C_OV[j] + C_OV[j-1]) + 2*D_OV*A1*dt*C_V[j]*C_OV[j] + 0.5*A_OV*fx * (C_OV[j+1]-C_OV[j-1]);
+                    fx = (phi[j+1]-phi[j-1]);
+                    C_MV_2[j] = C_MV[j] + A_MV*(C_MV[j+1]-2*C_MV[j]+C_MV[j-1]) - 2*D_MV*dt*d[j]*C_MV[j] - 0.5*A_MV*fx*A0*(C_MV[j+1]-C_MV[j-1]);
+                    C_OV_2[j] = C_OV[j] + A_OV*(C_OV[j+1]-2*C_OV[j]+C_OV[j-1]) + 2*D_OV*dt*d[j]*C_OV[j] + 0.5*A_OV*fx*A0*(C_OV[j+1]-C_OV[j-1]);
                 }
 
                 // граничные для MV
-                C_MV_2[0] = C_MV_2[1] / (1 + k1*h/D_MV + 2*fx_0);
-                C_MV_2[Nx-1] = (C_MV_2[Nx-2] + k3*h/D_MV)/(1 - 2*fx_L);
+                C_MV_2[0] = C_MV_2[1] / (1 + k1*h/D_MV + 2*fx_0*A0);
+                C_MV_2[Nx-1] = (C_MV_2[Nx-2] + k3*h/D_MV)/(1 - 2*fx_L*A0);
                 
                 // граничные для OV
-                C_OV_2[0] = (C_OV_2[1] + k2*h/D_OV)/(1 - 2*fx_0);
-                C_OV_2[Nx-1] = C_OV_2[Nx-2] / (1 + k4*h/D_OV + 2*fx_L);
+                C_OV_2[0] = (C_OV_2[1] + k2*h/D_OV)/(1 - 2*fx_0*A0);
+                C_OV_2[Nx-1] = C_OV_2[Nx-2] / (1 + k4*h/D_OV + 2*fx_L*A0);
 
                 for (int m = 0; m < Nx; ++m) {
                     C_MV[m] = C_MV_2[m];
@@ -299,10 +269,10 @@ class Film
                 fx_L = phi[Nx-1] - phi[Nx-2];
                 phi_mf = phi_ext - phi[0];
                 phi_fs = phi[Nx-1];
-                k1 = k1_0 * exp(an*phi_mf);
-                k2 = k2_0 * exp(an*phi_mf);
-                k3 = k3_0 * exp(an*phi_fs);
-                k4 = k4_0 * exp(an*phi_fs);
+                k1 = k1_0 * exp(an1*A0*phi_mf);
+                k2 = k2_0 * exp(an1*A0*phi_mf);
+                k3 = k3_0 * exp(an2*A0*phi_fs);
+                k4 = k4_0 * exp(an2*A0*phi_fs);
 
                 if (i % n_save == 0) {
                     for (int p = 0; p < Nx; ++p) {
@@ -496,8 +466,11 @@ class Film
         double get_k5_0() { return k5_0; }
         void set_k5_0(double a) { k5_0 = a; ++check_init; }
 
-        double get_an() { return an; }
-        void set_an(double a) { an = a; ++check_init; }
+        double get_an1() { return an1; }
+        void set_an1(double a) { an1 = a; ++check_init; }
+
+        double get_an2() { return an2; }
+        void set_an2(double a) { an2 = a; ++check_init; }
 
         double get_e_f() { return e_f; }
         void set_e_f(double a) { e_f = a; ++check_init; }
@@ -535,13 +508,19 @@ class Film
         double get_A_L() { return A_L; }
         void set_A_L(double a) { A_L = a; ++check_init; }
 
+        double get_A_phi() { return A_phi; }
+        void set_A_phi(double a) { A_phi = a; ++check_init; }
+
         double get_A_C() { return A_C; }
 
         double get_A_t() { return A_t; }
 
-        double get_A_phi() { return A_phi; }
-      
-        
+        vector<double> get_C_MV() { return C_MV; }
+        void set_C_MV(vector<double> & a) { C_MV = a; }
+
+        vector<double> get_C_OV() { return C_OV; }
+        void set_C_OV(vector<double> & a) { C_OV = a; }
+
 };
 
 #endif // FILM_H
