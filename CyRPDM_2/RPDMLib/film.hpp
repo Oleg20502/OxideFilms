@@ -117,12 +117,12 @@ class Film
             Ndata = (Nt - 1) / n_save + 2;
 
             A0 = A_phi * Ff / (R * Temp);
-            A1 = -Ff/e_f/e_0*(A_k*pow(A_L, 3)/A_D)*2 / A_phi;
+            A1 = -Ff/e_f/e_0 * 2 * (A_k*pow(A_L, 3)/A_D) / A_phi;
             A2 = -e_dl/e_f/d_dl;
             A3 = e_f*(d_dl/e_dl + d_cdl/e_cdl);
-            A4 = dt*0.5/h;
-            A_MV = D_MV * dt/ pow(h, 2);
-            A_OV = D_OV * dt/ pow(h, 2);
+            A4 = dt * 0.5 / h;
+            A_MV = D_MV * dt / pow(h, 2);
+            A_OV = D_OV * dt / pow(h, 2);
 
             C_MV.resize(Nx);
             C_OV.resize(Nx);
@@ -204,7 +204,7 @@ class Film
         }
 
         int solve()
-        {         
+        {
             for (int i = 1; i < Nx-1; ++i) {
                 Cm[i] = C[i]/(B[i] - A[i]*Cm[i-1]);
                 dm[i] = (d[i] - A[i]*dm[i-1])/(B[i] - A[i]*Cm[i-1]);
