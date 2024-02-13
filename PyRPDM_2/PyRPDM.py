@@ -96,6 +96,8 @@ class Film:
         self.N_data = (self.Nt-2) // self.n_save + 2
 
         self.Data_C = np.zeros((self.N_data, self.Nd * self.Nx))
+        self.Data_J1 = np.zeros((self.N_data, self.Nx-1))
+        self.Data_J2 = np.zeros((self.N_data, self.Nx-1))
         self.Data_phi = np.zeros((self.N_data, self.Nx))
         self.Data_k2 = np.zeros(self.N_data)
         self.Data_t = np.zeros(self.N_data)
@@ -158,32 +160,25 @@ class Film:
         phi_mf = self.phi_ext - phi[0]
         phi_fs = phi[-1]
         k1, k2, k3, k4 = self.update_k(phi_mf, phi_fs)
+        dfi = phi[1:] - phi[:-1]
 
         Eq = np.zeros(self.Nd * self.Nx)
-        for nd in range(self.Nd):
-            for i in range(1, self.Nx-1):
-                k = i + nd * self.Nx
 
-                dfi = phi[i+1] - phi[i]
-                J1 = -self.D[nd] * (C[k+1] * self.B(-self.z[nd]*dfi) - C[k] * self.B(self.z[nd]*dfi)) / dx
+        J1 = -self.D[0] * (C[1:self.Nx] * self.B_arr(-self.z[0]*dfi) - C[:self.Nx - 1] * self.B_arr(self.z[0]*dfi)) / dx
+        Eq[1:self.Nx - 1] = C[1:self.Nx - 1] - self.C[1:self.Nx - 1] + dt * (J1[1:] - J1[:-1]) / dx
+        
 
-                dfi = phi[i] - phi[i-1]
-                J2 = -self.D[nd] * (C[k] * self.B(-self.z[nd]*dfi) - C[k-1] * self.B(self.z[nd]*dfi)) / dx
-            
-                Eq[k] = C[k] - self.C[k] + dt * (J1 - J2) / dx
+        J2 = -self.D[1] * (C[1 + self.Nx:self.Nx*2] * self.B_arr(-self.z[1]*dfi) - C[self.Nx:self.Nx*2 - 1] * self.B_arr(self.z[1]*dfi)) / dx
+        Eq[1 + self.Nx:self.Nx*2 - 1] = C[1 + self.Nx:self.Nx*2 - 1] - self.C[1 + self.Nx:self.Nx*2 - 1] + dt * (J2[1:] - J2[:-1]) / dx
+
 
         # === Boundary conditions ===
-        dfi = phi[1] - phi[0]
-        J0 = -self.D[0] * (C[1] * self.B(-self.z[0]*dfi) - C[0] * self.B(self.z[0]*dfi)) / dx
-        Eq[0] = J0 + k1 * C[0]
-        J0 = -self.D[1] * (C[1+self.Nx] * self.B(-self.z[1]*dfi) - C[self.Nx] * self.B(self.z[1]*dfi)) / dx
-        Eq[self.Nx] = J0 - k2
+        Eq[0] = J1[0] + k1 * C[0]
+        Eq[self.Nx-1] = J1[-1] + k3
 
-        dfi = phi[self.Nx-1] - phi[self.Nx-2]
-        J0 = -self.D[0] * (C[self.Nx-1] * self.B(-self.z[0]*dfi) - C[self.Nx-2] * self.B(self.z[0]*dfi)) / dx
-        Eq[self.Nx-1] = J0 + k3
-        J0 = -self.D[1] * (C[2*self.Nx-1] * self.B(-self.z[1]*dfi) - C[2*self.Nx-2] * self.B(self.z[1]*dfi)) / dx
-        Eq[2*self.Nx-1] = J0 - k4 * C[2*self.Nx-1]
+        
+        Eq[self.Nx] = J2[0] - k2
+        Eq[2*self.Nx-1] = J2[-1] - k4 * C[2*self.Nx-1]
         # ============================
       
         return Eq
@@ -194,8 +189,13 @@ class Film:
         phi_mf = self.phi_ext - self.phi[0]
         phi_fs = self.phi[-1]
         self.k1, self.k2, self.k3, self.k4 = self.update_k(phi_mf, phi_fs)
+        dfi = self.phi[1:] - self.phi[:-1]
 
         self.Data_C[i_data] = self.C
+        self.Data_J1[i_data] = -self.D[0] * (self.C[1:self.Nx] * self.B_arr(-self.z[0]*dfi) \
+                                             - self.C[:self.Nx - 1] * self.B_arr(self.z[0]*dfi)) / self.dx
+        self.Data_J2[i_data] = -self.D[1] * (self.C[1 + self.Nx:self.Nx*2] * self.B_arr(-self.z[1]*dfi) - \
+                                            self.C[self.Nx:self.Nx*2 - 1] * self.B_arr(self.z[1]*dfi)) / self.dx
         self.Data_phi[i_data] = self.phi
         self.Data_k2[i_data] = self.k2
         self.Data_t[i_data] = self.t[self.i_time]
@@ -223,7 +223,9 @@ class Film:
         else:
             return 1
                             
-
+    
+    def B_arr(self, x):
+        return np.where(x != 0, x/(np.exp(x) - 1), 1)
 
     
 
